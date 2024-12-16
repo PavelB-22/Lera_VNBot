@@ -1,6 +1,9 @@
 const { loadServices } = require('./utils'); // Импортируем функцию для загрузки услуг из файла
 require('dotenv').config(); // Чтобы загрузить переменные из .env
 
+const userStates = {}; // Глобальный объект для отслеживания состояния пользователей
+
+
 const ADMIN_USER_ID = parseInt(process.env.ADMIN_USER_ID, 10); // Получаем ID администратора из .env
 
 // Функция для приветствия пользователя
@@ -11,12 +14,12 @@ async function greetUser(bot, msg) {
 
         const keyboard = userId === ADMIN_USER_ID
             ? [
-                ['Перечень услуг', 'Подробнее об услугах'],
+                ['Перечень услуг', 'Прайс процедур'],
                 ['Связь с Валерией', 'Акции'],
                 ['Редактирование'], // Кнопка для админа
             ]
             : [
-                ['Перечень услуг', 'Подробнее об услугах'],
+                ['Перечень услуг', 'Прайс процедур'],
                 ['Связь с Валерией', 'Акции'],
             ];
 
@@ -68,6 +71,9 @@ async function showServices(bot, userId) {
 
         await bot.sendPhoto(userId, './images/cat2.png');
         await bot.sendMessage(userId, 'Выберите номер услуги для записи');
+
+        // Устанавливаем состояние пользователя
+        userStates[userId] = { awaitingServiceSelection: true };
     } catch (error) {
         console.error('Ошибка при отображении услуг:', error);
         await bot.sendMessage(userId, 'Произошла ошибка при загрузке услуг. Попробуйте позже.');
@@ -91,8 +97,13 @@ function getServiceByNumber(serviceNumber, services) {
 // Обработка выбора услуги
 async function handleServiceSelection(bot, msg) {
     try {
-        const userId = msg.from.id;
+        const userId = msg?.from?.id; // Проверка, чтобы userId был определён
         const userMessage = msg.text;
+
+        // Проверяем, ожидает ли пользователь выбора услуги
+        if (!userStates[userId]?.awaitingServiceSelection) {
+            return; // Если пользователь не в режиме выбора услуги, ничего не делаем
+        }
 
         const services = loadServices();
         if (!isNaN(userMessage) && parseInt(userMessage, 10) > 0) {
@@ -101,26 +112,34 @@ async function handleServiceSelection(bot, msg) {
 
             if (serviceInfo) {
                 await bot.sendMessage(userId, `Вы выбрали услугу: ${serviceInfo.name}`);
-                await bot.sendMessage(userId, `Для записи перейдите по ссылке: ${serviceInfo.link}`, {
+                await bot.sendMessage(userId, `Для уточнения цен перейдите по ссылке: ${serviceInfo.link}`, {
                     parse_mode: 'HTML',
                 });
             } else {
                 await bot.sendMessage(userId, 'Неверный номер услуги. Пожалуйста, выберите правильный номер.');
             }
+
+            // После выбора услуги сбрасываем состояние
+            userStates[userId].awaitingServiceSelection = false;
         } else {
-            await bot.sendMessage(userId, 'Пожалуйста, отправьте только номер услуги.');
+            await bot.sendMessage(userId, 'Неверный ввод. Пожалуйста, отправьте номер услуги.');
         }
     } catch (error) {
         console.error('Ошибка при обработке выбора услуги:', error);
-        await bot.sendMessage(userId, 'Произошла ошибка. Попробуйте позже.');
+        if (msg?.from?.id) {
+            await bot.sendMessage(msg.from.id, 'Произошла ошибка. Попробуйте позже.');
+        }
     }
 }
 
-// Функция для отображения ссылки на запись
+
+
+
+// Функция для отображения ссылки на прайс
 async function showAppointmentLink(bot, userId) {
     try {
         await bot.sendPhoto(userId, './images/cat3.png', {
-            caption: 'Для записи перейдите по ссылке: https://dikidi.ru/ru/profile/vn_beauty_studio_1700345/master/3662474',
+            caption: 'Для уточнения цен перейдите по ссылке: https://dikidi.ru/ru/profile/vn_beauty_studio_1700345/master/3662474',
         });
     } catch (error) {
         console.error('Ошибка при отображении ссылки на запись:', error);
@@ -151,18 +170,24 @@ async function showPromotions(bot, userId) {
 function handleUserMessage(bot, msg) {
     const userId = msg.from.id;
     const text = msg.text;
+
     if (text === 'Перечень услуг') {
         showServices(bot, userId);
-    } else if (text === 'Подробнее об услугах') {
+    } else if (text === 'Прайс процедур') {
+        userStates[userId] = { awaitingServiceSelection: false }; // Сбрасываем состояние
         showAppointmentLink(bot, userId);
     } else if (text === 'Связь с Валерией') {
+        userStates[userId] = { awaitingServiceSelection: false }; // Сбрасываем состояние
         contactValeria(bot, userId);
     } else if (text === 'Акции') {
+        userStates[userId] = { awaitingServiceSelection: false }; // Сбрасываем состояние
         showPromotions(bot, userId);
     } else if (text === 'Редактирование' && userId === ADMIN_USER_ID) {
+        userStates[userId] = { awaitingServiceSelection: false }; // Сбрасываем состояние
         bot.sendMessage(userId, 'Выберите действие для редактирования:');
     } else {
         handleServiceSelection(bot, msg);
     }
 }
+
 module.exports = { greetUser, handleUserMessage, contactValeria };
