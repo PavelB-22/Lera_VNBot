@@ -1,4 +1,3 @@
-
 // Загружаем переменные окружения из файла .env
 require('dotenv').config();
 
@@ -13,7 +12,18 @@ if (!TELEGRAM_BOT_TOKEN) {
     console.error('Ошибка: Telegram Bot Token не предоставлен!');
     process.exit(1);  // Останавливаем выполнение, если токен не найден
 }
+const express = require('express');
+const app = express();
 
+const port = 3000; // Порт, к которому будет привязан сервер
+
+app.get('/', (req, res) => {
+    res.send('Hello World!');
+});
+
+app.listen(port, () => {
+    console.log(`Server is running on port ${port}.`);
+});
 // Создаем бота
 const bot = new TelegramBot(TELEGRAM_BOT_TOKEN, { polling: true });
 
@@ -22,10 +32,10 @@ bot.onText(/\/start/, (msg) => {
     greetUser(bot, msg);  // Приветствуем пользователя
 });
 
+// Обработка текстовых сообщений
 bot.on('message', (msg) => {
-    handleUserMessage(bot, msg);  // Обрабатываем входящие сообщения, передавая bot и msg
+    handleUserMessage(bot, msg);  // Обрабатываем входящие сообщения
 });
-
 
 // В случае ошибок
 bot.on('polling_error', (error) => {
