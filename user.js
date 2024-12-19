@@ -3,25 +3,16 @@ require('dotenv').config(); // Чтобы загрузить переменны�
 
 const userStates = {}; // Глобальный объект для отслеживания состояния пользователей
 
-
-const ADMIN_USER_ID = parseInt(process.env.ADMIN_USER_ID, 10); // Получаем ID администратора из .env
-
 // Функция для приветствия пользователя
 async function greetUser(bot, msg) {
     try {
         const userName = msg.from.first_name || 'пользователь';
         const userId = msg.from.id;
 
-        const keyboard = userId === ADMIN_USER_ID
-            ? [
-                ['Перечень услуг', 'Прайс процедур'],
-                ['Связь с Валерией', 'Акции'],
-                ['Редактирование'], // Кнопка для админа
-            ]
-            : [
-                ['Перечень услуг', 'Прайс процедур'],
-                ['Связь с Валерией', 'Акции'],
-            ];
+        const keyboard = [
+            ['Перечень услуг', 'Прайс процедур'],
+            ['Связь с Валерией', 'Акции'],
+        ];
 
         await bot.sendPhoto(userId, './images/cat1.png', {
             caption: `${userName}, категорически Вас приветствую! Я бот по записи к мастеру-Валерия.\nВыберите опцию, чтобы я смог вам помочь.`,
@@ -132,9 +123,6 @@ async function handleServiceSelection(bot, msg) {
     }
 }
 
-
-
-
 // Функция для отображения ссылки на прайс
 async function showAppointmentLink(bot, userId) {
     try {
@@ -182,9 +170,6 @@ function handleUserMessage(bot, msg) {
     } else if (text === 'Акции') {
         userStates[userId] = { awaitingServiceSelection: false }; // Сбрасываем состояние
         showPromotions(bot, userId);
-    } else if (text === 'Редактирование' && userId === ADMIN_USER_ID) {
-        userStates[userId] = { awaitingServiceSelection: false }; // Сбрасываем состояние
-        bot.sendMessage(userId, 'Выберите действие для редактирования:');
     } else {
         handleServiceSelection(bot, msg);
     }

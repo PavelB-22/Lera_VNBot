@@ -1,8 +1,0 @@
-meta:
-  environment: jvm
-  toolchain:
-    name: Node.js
-    version: 22.12
-
-build:
-  args: -Dserver.port=3000 -Pproduction
